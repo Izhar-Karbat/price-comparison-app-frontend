@@ -9,6 +9,7 @@ import CartScreen from '../screens/CartScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import AccountScreen from '../screens/AccountScreen';
 import ScannerScreen from '../screens/ScannerScreen';
+import DealsScreen from '../screens/DealsScreen';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -70,6 +71,11 @@ export function MainAppNavigator() {
       <Tab.Screen
         name="Scanner"
         component={ScannerScreen}
+        options={{ headerShown: false }}
+      />
+      <Tab.Screen
+        name="Deals"
+        component={DealsScreen}
         options={{ headerShown: false }}
       />
       <Tab.Screen

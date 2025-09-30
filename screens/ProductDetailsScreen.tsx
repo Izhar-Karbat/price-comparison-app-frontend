@@ -17,6 +17,8 @@ import ProductActions from '../components/product-details/ProductActions';
 import SuggestedAlternatives from '../components/product-details/SuggestedAlternatives';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { Promotion } from '../services/api';
+import DealCard from '../components/deals/DealCard';
 
 type ProductDetailsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProductDetails'>;
 type ProductDetailsScreenRouteProp = RouteProp<RootStackParamList, 'ProductDetails'>;
@@ -32,7 +34,7 @@ interface ExtendedProductData {
   description: string;
   ingredients: Array<{ name: string; type: 'safe' | 'warning' | 'danger' }>;
   prices: PriceInfo[];
-  promotions?: Array<{ id: number; description: string; type?: 'discount' | 'bogo' | 'sale' | 'clearance' | 'special' }>;
+  promotions?: Promotion[];
 }
 
 // Helper function to convert ProductGroup to extended product data
@@ -41,12 +43,6 @@ const convertToExtendedProductData = (productGroup: ProductGroup): ExtendedProdu
     .filter(p => p.price && !isNaN(p.price) && p.price > 0)
     .map(p => p.price);
   const cheapestPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
-
-  // Generate sample promotions for demonstration
-  const samplePromotions = [
-    { id: 1, description: '20% Off Today Only', type: 'discount' as const },
-    { id: 2, description: 'Buy 2 Get 1 Free', type: 'bogo' as const },
-  ];
 
   return {
     masterproductid: productGroup.groupId.toString(),
@@ -67,7 +63,7 @@ const convertToExtendedProductData = (productGroup: ProductGroup): ExtendedProdu
       price: p.price,
       store: 'Store Location' // Default store value since original PriceInfo doesn't have store field
     })),
-    promotions: samplePromotions,
+    promotions: [], // Will be populated from API response if available
   };
 };
 
@@ -123,6 +119,12 @@ const ProductDetailsScreen: React.FC = () => {
           };
 
           const extendedData = convertToExtendedProductData(targetProduct);
+
+          // If passedProductData has promotions from API, use them
+          if (passedProductData.promotions && passedProductData.promotions.length > 0) {
+            extendedData.promotions = passedProductData.promotions;
+          }
+
           setProductData(extendedData);
 
           // Skip fetching alternatives to avoid network requests
@@ -268,11 +270,25 @@ const ProductDetailsScreen: React.FC = () => {
           />
         )}
 
+        {/* Promotions Section - Display deals from API */}
+        {productData.promotions && productData.promotions.length > 0 && (
+          <View style={styles.promotionsSection}>
+            <Text style={styles.promotionsSectionTitle}>Active Promotions</Text>
+            {productData.promotions.map((promotion) => (
+              <View key={promotion.deal_id} style={styles.promotionCard}>
+                <Text style={styles.promotionTitle}>{promotion.title}</Text>
+                <Text style={styles.promotionDescription}>{promotion.description}</Text>
+                <Text style={styles.promotionRetailer}>Available at {promotion.retailer_name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Product Info - Description and Ingredients */}
         <ProductInfo
           description={productData.description}
           ingredients={productData.ingredients}
-          promotions={productData.promotions || []}
+          promotions={undefined}
         />
 
         {/* Price Comparison Table */}
@@ -310,6 +326,40 @@ const styles = StyleSheet.create({
   },
   priceSection: {
     paddingHorizontal: designTokens.spacing.lg,
+  },
+  promotionsSection: {
+    paddingHorizontal: designTokens.spacing.lg,
+    marginBottom: designTokens.spacing.lg,
+  },
+  promotionsSectionTitle: {
+    fontSize: designTokens.typography.size.xl,
+    fontWeight: designTokens.typography.weight.bold,
+    color: designTokens.colors.textPrimary,
+    marginBottom: designTokens.spacing.md,
+  },
+  promotionCard: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: 12,
+    padding: designTokens.spacing.md,
+    marginBottom: designTokens.spacing.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F4B2B2',
+  },
+  promotionTitle: {
+    fontSize: designTokens.typography.size.lg,
+    fontWeight: designTokens.typography.weight.bold,
+    color: '#3A3937',
+    marginBottom: 4,
+  },
+  promotionDescription: {
+    fontSize: designTokens.typography.size.body,
+    color: '#6B6864',
+    marginBottom: 4,
+  },
+  promotionRetailer: {
+    fontSize: designTokens.typography.size.small,
+    color: '#8A8680',
+    fontWeight: designTokens.typography.weight.semibold,
   },
 });
 

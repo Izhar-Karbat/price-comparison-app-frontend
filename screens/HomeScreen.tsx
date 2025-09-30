@@ -26,8 +26,9 @@ import NeumorphicButton from '../components/ui/NeumorphicButton';
 import { AuthContext } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useApp } from '../context/AppContext';
-import { testConnectivity, getApiBaseUrl } from '../services/api';
+import { testConnectivity, getApiBaseUrl, fetchDeals, Deal } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DealCard from '../components/deals/DealCard';
 
 // Helper function to convert ProductGroup to Product format with pricing data
 const convertProductGroupToProduct = (productGroup: ProductGroup): Product & { originalPrice?: number } => {
@@ -63,6 +64,8 @@ const HomeScreen = ({ navigation }: Props) => {
   const [activeTab, setActiveTab] = useState<'picks' | 'trending'>('picks');
   const [featuredProduct, setFeaturedProduct] = useState<Product | null>(null);
   const [connectivityStatus, setConnectivityStatus] = useState<string>('Testing...');
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealsLoading, setDealsLoading] = useState(false);
 
   const fetchFeaturedProducts = async () => {
     setIsLoading(true);
@@ -120,8 +123,21 @@ const HomeScreen = ({ navigation }: Props) => {
     }, 500);
   };
 
+  const loadDeals = async () => {
+    try {
+      setDealsLoading(true);
+      const dealsData = await fetchDeals(3); // Get top 3 deals for home screen
+      setDeals(dealsData);
+    } catch (error) {
+      console.error('Error loading deals:', error);
+    } finally {
+      setDealsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchFeaturedProducts();
+    loadDeals();
 
     // IMMEDIATE CONNECTIVITY TEST - This will run when app loads
     console.log('🚀 [CONNECTIVITY TEST] Starting connectivity test...');
@@ -317,6 +333,30 @@ const HomeScreen = ({ navigation }: Props) => {
 
         {/* Savings Meter */}
         <SavingsMeter />
+
+        {/* Deals Section */}
+        {!dealsLoading && deals.length > 0 && (
+          <View style={styles.dealsSection}>
+            <View style={styles.dealsSectionHeader}>
+              <Text style={styles.sectionTitle}>Top Deals This Week</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Deals')}>
+                <Text style={styles.seeAllButton}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={deals}
+              renderItem={({ item }) => (
+                <View style={styles.dealCardWrapper}>
+                  <DealCard deal={item} style={styles.dealCardHorizontal} />
+                </View>
+              )}
+              keyExtractor={(item) => `deal-${item.deal_id}`}
+              contentContainerStyle={styles.dealsListContainer}
+            />
+          </View>
+        )}
 
         {/* Featured Product Card */}
         {featuredProduct && (
@@ -681,6 +721,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8B4513',
     textAlign: 'center',
+  },
+  dealsSection: {
+    marginBottom: 24,
+  },
+  dealsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  seeAllButton: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#F4B2B2',
+  },
+  dealsListContainer: {
+    paddingHorizontal: 20,
+  },
+  dealCardWrapper: {
+    marginRight: 12,
+  },
+  dealCardHorizontal: {
+    width: 280,
   },
 });
 
