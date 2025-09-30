@@ -1,8 +1,7 @@
 // screens/ProductDetailsScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, Share, Alert } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, Share, Alert } from 'react-native';
+import { StackScreenProps } from '@react-navigation/stack';
 
 import { designTokens } from '../theme/designTokens';
 import type { RootStackParamList } from '../App';
@@ -17,11 +16,11 @@ import ProductActions from '../components/product-details/ProductActions';
 import SuggestedAlternatives from '../components/product-details/SuggestedAlternatives';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Promotion } from '../services/api';
+import { Promotion, getProductById } from '../services/api';
 import DealCard from '../components/deals/DealCard';
 
-type ProductDetailsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ProductDetails'>;
-type ProductDetailsScreenRouteProp = RouteProp<RootStackParamList, 'ProductDetails'>;
+// Props type for component - replaces useNavigation/useRoute hooks
+type Props = StackScreenProps<RootStackParamList, 'ProductDetails'>;
 
 interface ExtendedProductData {
   masterproductid: string;
@@ -45,31 +44,29 @@ const convertToExtendedProductData = (productGroup: ProductGroup): ExtendedProdu
   const cheapestPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
 
   return {
-    masterproductid: productGroup.groupId.toString(),
-    productName: productGroup.name,
-    brand: productGroup.brand,
-    image: 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(productGroup.name.substring(0, 10)),
-    imageUrl: 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(productGroup.name.substring(0, 10)),
+    masterproductid: productGroup.groupId?.toString() || '0',
+    productName: productGroup.name || 'Unknown Product',
+    brand: productGroup.brand || 'Unknown Brand',
+    image: 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(productGroup.name?.substring(0, 10) || 'Product'),
+    imageUrl: 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(productGroup.name?.substring(0, 10) || 'Product'),
     price: cheapestPrice,
     healthScore: Math.floor(Math.random() * 20) + 80, // Random health score between 80-100
-    description: `${productGroup.name} from ${productGroup.brand}. ${productGroup.attributes.size_value ? `Size: ${productGroup.attributes.size_value} ${productGroup.attributes.size_unit}` : ''}`,
+    description: `${productGroup.name || 'Product'} from ${productGroup.brand || 'Unknown'}. ${productGroup.attributes?.size_value ? `Size: ${productGroup.attributes.size_value} ${productGroup.attributes?.size_unit || ''}` : ''}`,
     ingredients: [
       { name: 'Natural Extract', type: 'safe' as const },
       { name: 'Preservatives', type: 'warning' as const },
       { name: 'Active Ingredients', type: 'safe' as const },
     ],
-    prices: productGroup.prices.map(p => ({
+    prices: productGroup.prices?.map(p => ({
       retailerName: p.retailer,
       price: p.price,
       store: 'Store Location' // Default store value since original PriceInfo doesn't have store field
-    })),
+    })) || [],
     promotions: [], // Will be populated from API response if available
   };
 };
 
-const ProductDetailsScreen: React.FC = () => {
-  const navigation = useNavigation<ProductDetailsScreenNavigationProp>();
-  const route = useRoute<ProductDetailsScreenRouteProp>();
+const ProductDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { productId, productData: passedProductData } = route.params || {};
   const { addToCart } = useCart();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
@@ -99,7 +96,7 @@ const ProductDetailsScreen: React.FC = () => {
 
           // Use the passed data without making additional network requests
           const targetProduct = {
-            groupId: passedProductData.product_id,
+            groupId: passedProductData.product_id || 0,
             name: passedProductData.name || passedProductData.productName || 'Unknown Product',
             brand: passedProductData.brand || 'Unknown Brand',
             attributes: passedProductData.attributes || {},
@@ -121,7 +118,7 @@ const ProductDetailsScreen: React.FC = () => {
           const extendedData = convertToExtendedProductData(targetProduct);
 
           // If passedProductData has promotions from API, use them
-          if (passedProductData.promotions && passedProductData.promotions.length > 0) {
+          if (passedProductData.promotions?.length > 0) {
             extendedData.promotions = passedProductData.promotions;
           }
 
@@ -132,8 +129,44 @@ const ProductDetailsScreen: React.FC = () => {
           console.log('[ProductDetailsScreen] Skipping alternatives fetch to avoid network errors');
           setAlternativeProduct(null);
         } else {
-          // Fallback: try to search for the product by name
-          console.error('[ProductDetailsScreen] No product data passed, cannot fetch by ID alone');
+          // Fetch product data by ID from API
+          console.log('[ProductDetailsScreen] Fetching product by ID:', productId);
+
+          // Validate productId before making API call
+          if (!productId || typeof productId !== 'string' || productId.trim().length === 0) {
+            console.error('[ProductDetailsScreen] Invalid productId:', productId);
+            return;
+          }
+
+          try {
+            const productResponse = await getProductById(productId);
+            console.log('[ProductDetailsScreen] Product fetched:', productResponse);
+
+            // Convert to ExtendedProductData format
+            const targetProduct = {
+              groupId: productResponse.product_id || 0,
+              name: productResponse.name || 'Unknown Product',
+              brand: productResponse.brand || 'Unknown Brand',
+              attributes: {},
+              prices: productResponse.lowest_price ? [{
+                retailer: 'Available Store',
+                price: productResponse.lowest_price,
+                store: 'Pharmacy'
+              }] : []
+            };
+
+            const extendedData = convertToExtendedProductData(targetProduct);
+
+            // Add promotions if available
+            if (productResponse.promotions?.length > 0) {
+              extendedData.promotions = productResponse.promotions;
+            }
+
+            setProductData(extendedData);
+            setAlternativeProduct(null);
+          } catch (error) {
+            console.error('[ProductDetailsScreen] Error fetching product by ID:', error);
+          }
         }
       } catch (error) {
         console.error('[ProductDetailsScreen] Error loading product data:', error);
@@ -175,7 +208,7 @@ const ProductDetailsScreen: React.FC = () => {
         imageUrl: productData.imageUrl,
         price: validPrice,
         healthScore: productData.healthScore,
-        product_id: parseInt(productData.masterproductid),
+        product_id: parseInt(productData.masterproductid || '0'),
         name: productData.productName,
         image_url: productData.imageUrl,
         description: productData.description,
@@ -212,7 +245,7 @@ const ProductDetailsScreen: React.FC = () => {
         imageUrl: productData.imageUrl,
         price: productData.price,
         healthScore: productData.healthScore,
-        product_id: parseInt(productData.masterproductid),
+        product_id: parseInt(productData.masterproductid || '0'),
         name: productData.productName,
         image_url: productData.imageUrl,
         description: productData.description,
@@ -256,25 +289,25 @@ const ProductDetailsScreen: React.FC = () => {
         />
 
         {/* Smart Location Card - Find nearest store */}
-        {productData.prices && productData.prices.length > 0 && (
+        {productData.prices?.length > 0 && (
           <SmartLocationCard
             store={{
-              storeName: productData.prices[0].store || 'Store',
-              retailerName: productData.prices[0].retailerName,
+              storeName: productData.prices?.[0]?.store || 'Store',
+              retailerName: productData.prices?.[0]?.retailerName || 'Unknown Retailer',
               address: 'Sample Address 123',
               city: 'Sample City',
               distance: Math.random() * 5, // Random distance for demo
-              price: productData.prices[0].price,
+              price: productData.prices?.[0]?.price || 0,
             }}
             onNavigate={() => console.log('Navigate to store')}
           />
         )}
 
         {/* Promotions Section - Display deals from API */}
-        {productData.promotions && productData.promotions.length > 0 && (
+        {productData.promotions?.length > 0 && (
           <View style={styles.promotionsSection}>
             <Text style={styles.promotionsSectionTitle}>Active Promotions</Text>
-            {productData.promotions.map((promotion) => (
+            {productData.promotions?.map((promotion) => (
               <View key={promotion.deal_id} style={styles.promotionCard}>
                 <Text style={styles.promotionTitle}>{promotion.title}</Text>
                 <Text style={styles.promotionDescription}>{promotion.description}</Text>
