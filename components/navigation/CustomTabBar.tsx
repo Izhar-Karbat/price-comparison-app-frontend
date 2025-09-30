@@ -26,6 +26,8 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
         return 'list-outline';
       case 'Scanner':
         return 'camera';
+      case 'Deals':
+        return 'pricetag-outline';
       case 'Favorites':
         return 'heart-outline';
       case 'Cart':
@@ -94,9 +96,10 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 
   const buttons = [
     { route: 'Home', isCenter: false },
-    { route: 'Cart', isCenter: false },
+    { route: 'Deals', isCenter: false },
     { route: 'Scanner', isCenter: true },
     { route: 'Favorites', isCenter: false },
+    { route: 'Cart', isCenter: false },
     { route: 'Account', isCenter: false },
   ];
 
@@ -141,22 +144,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#F7F5F3',
     borderRadius: 25,
     paddingVertical: 8,
     paddingHorizontal: 10,
     marginHorizontal: 10,
+    // Enhanced claymorphism shadow
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowColor: '#D4D0CC',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 5,
+        elevation: 8,
       },
     }),
+    // Inner light border for clay effect
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
+    borderBottomColor: 'rgba(212, 208, 204, 0.3)',
   },
   centerButtonWrapper: {
     marginTop: -20,
@@ -177,17 +185,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4B2B2',
     alignItems: 'center',
     justifyContent: 'center',
+    // Enhanced clay shadow
     ...Platform.select({
       ios: {
-        shadowColor: '#F4B2B2',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
+        shadowColor: '#E19D9D',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 6,
+        elevation: 8,
       },
     }),
+    // Inner light for 3D effect
+    borderWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.4)',
+    borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+    borderBottomColor: 'rgba(225, 157, 157, 0.3)',
+    borderRightColor: 'rgba(225, 157, 157, 0.3)',
   },
 });
 

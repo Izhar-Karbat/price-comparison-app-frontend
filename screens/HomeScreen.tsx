@@ -540,6 +540,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 32,
     position: 'relative',
+    // Clay morphism effect
+    backgroundColor: '#F7F5F3',
+    marginHorizontal: 20,
+    padding: 24,
+    borderRadius: 28,
+    shadowColor: '#D4D0CC',
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+    // Inner light border
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderBottomColor: 'rgba(212, 208, 204, 0.3)',
+    borderRightColor: 'rgba(212, 208, 204, 0.3)',
   },
   savingsSvg: {
     position: 'absolute',
@@ -699,8 +714,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    // Clay morphism effect
+    shadowColor: '#D4D0CC',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+    // Inner light border
     borderWidth: 1,
-    borderColor: '#E8E5E2',
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    borderBottomColor: 'rgba(212, 208, 204, 0.3)',
+    borderRightColor: 'rgba(212, 208, 204, 0.3)',
   },
   actionText: {
     fontSize: 14,
